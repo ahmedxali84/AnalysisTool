@@ -1,0 +1,178 @@
+        /* Basic styling for the page and table */
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Monospaced font for hacker feel */
+            margin: 0;
+            padding: 0;
+            background-color: #000000; /* Black background */
+            color: #00FF00; /* Green text color */
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            font-size: 16px; /* Set base font size */
+          }
+      
+          h1 {
+            text-align: center;
+            font-size: 3rem;
+            color: #00FF00; /* Green text color */
+            text-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00, 0 0 50px #00FF00; /* Glowing green effect */
+            margin-top: 20px;
+          }
+      
+          .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #111111; /* Dark background for container */
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8); /* Green glowing effect around container */
+            border-radius: 12px;
+          }
+      
+          .section {
+            margin-bottom: 30px;
+          }
+      
+          label, select, button, input {
+            display: block;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            padding: 12px;
+            background-color: #222222; /* Dark background for inputs */
+            border: 1px solid #00FF00; /* Green border */
+            color: #00FF00; /* Green text color */
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+          }
+      
+          button {
+            background-color: #333333;
+            color: #00FF00; /* Green text */
+            border: 1px solid #00FF00;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s ease;
+            font-size: 1.5rem;
+            padding: 15px;
+          }
+      
+          button:hover {
+            background-color: #444444; /* Slightly lighter grey on hover */
+            transform: scale(1.05); /* Button enlarges slightly on hover */
+          }
+      
+          button:active {
+            transform: scale(0.98); /* Button shrinks slightly when clicked */
+          }
+      
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            color: #00FF00; /* Green text for table */
+            font-size: 1.5rem;
+          }
+      
+          table, th, td {
+            border: 1px solid #00FF00; /* Green table borders */
+          }
+      
+          th, td {
+            padding: 15px;
+            text-align: center;
+          }
+      
+          th {
+            background-color: #222222; /* Dark grey background for header */
+            text-shadow: 0 0 10px #00FF00, 0 0 15px #00FF00; /* Glowing text for header */
+          }
+      
+          td {
+            background-color: #1a1a1a; /* Slightly lighter grey for cells */
+          }
+      
+          .output {
+            margin-top: 20px;
+            color: #00FF00; /* Green text */
+            font-size: 1.4rem;
+            text-align: center;
+            text-shadow: 0 0 5px #00FF00;
+          }
+      
+          input:focus, select:focus, button:focus {
+            outline: none;
+            border-color: #00FF00;
+            box-shadow: 0 0 15px #00FF00; /* Glowing focus effect */
+          }
+      
+          input, select {
+            background-color: #1a1a1a; /* Darker background for inputs */
+            color: #00FF00; /* Green text */
+          }
+      
+          .section h2 {
+            font-size: 2rem;
+            color: #00FF00;
+            text-shadow: 0 0 8px #00FF00, 0 0 15px #00FF00;
+          }
+      
+          /* Loader and other animations */
+          .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            animation: loaderFadeOut 5s forwards;
+          }
+      
+          .loader h1 {
+            font-size: 3rem;
+            color: #00FF00;
+            text-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00, 0 0 50px #00FF00; /* Glowing green effect */
+            animation: glow 3s infinite alternate; /* Glowing text animation */
+          }
+      
+          .loader p {
+            font-size: 1.5rem;
+            color: #00FF00;
+            margin-top: 20px;
+            text-shadow: 0 0 10px #00FF00, 0 0 20px #00FF00;
+            animation: blink 3s infinite alternate; /* Blinking text animation */
+          }
+      
+          /* Loader Fade out animation */
+          @keyframes loaderFadeOut {
+            0% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0;
+              visibility: hidden;
+            }
+          }
+      
+          @keyframes glow {
+            0% {
+              text-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00, 0 0 50px #00FF00;
+            }
+            50% {
+              text-shadow: 0 0 25px #00FF00, 0 0 50px #00FF00, 0 0 75px #00FF00;
+            }
+            100% {
+              text-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00, 0 0 50px #00FF00;
+            }
+          }
+      
+          /* Chart container */
+          .chart-container {
+            margin-top: 30px;
+            width: 100%;
+            height: 400px;
+            position: relative;
+          }
