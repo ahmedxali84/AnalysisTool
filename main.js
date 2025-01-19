@@ -12,7 +12,6 @@ const scatterChartCanvas = document.getElementById('scatterChart');
 const histogramChartCanvas = document.getElementById('histogramChart');
 const pieChartCanvas = document.getElementById('pieChart');
 const lineChartCanvas = document.getElementById('lineChart');
-const barChartCanvas = document.getElementById('barChart');
 
 // Variables
 let parsedData = [];
@@ -35,7 +34,7 @@ function handleFile(event) {
     const reader = new FileReader();
     reader.onload = function (e) {
       parsedData = parseCSV(e.target.result);
-      displayTable(parsedData);
+      displayTable(parsedData);  // Initial display of the entire table
     };
     reader.readAsText(file);
   } else {
@@ -51,7 +50,8 @@ function parseCSV(data) {
 
 // Display data in a table
 function displayTable(data) {
-  dataTable.innerHTML = '';
+  dataTable.innerHTML = ''; // Clear existing table
+
   const rowLimit = parseInt(rowLimitInput.value, 10) || data.length;
   const limitedData = data.slice(0, rowLimit);
 
@@ -93,18 +93,43 @@ async function processOperation() {
   } else if (operation === 'descriptive') {
     const stats = getDescriptiveStats(limitedData);
     output.innerHTML = formatDescriptiveStats(stats);
-    renderCharts(limitedData);
+    renderCharts(limitedData, stats);
   } else if (operation === 'regression') {
-    const regressionResult = calculateLinearRegression(limitedData);
+    const columns = await getColumnsForRegression();
+    const regressionResult = calculateLinearRegressionForColumns(limitedData, columns.x, columns.y);
     output.innerHTML = formatRegressionStats(regressionResult);
     renderCharts(limitedData, regressionResult);
+  } else if (operation === 'correlation') {
+    const columns = await getColumnsForCorrelation();
+    const correlation = calculateCorrelationForColumns(limitedData, columns.x, columns.y);
+    output.innerHTML = `Correlation: ${correlation.toFixed(2)}`;
+    renderCharts(limitedData);
   }
 }
 
 // Data cleaning function (example: removing rows with missing values)
-function cleanData(data) {
-  const cleanedData = data.filter((row) => row.every((cell) => cell !== null && cell !== ''));
-  return cleanedData;
+async function cleanData(data) {
+  const confirmed = await confirmDataCleaning();
+  if (confirmed === 'remove') {
+    return data.filter((row) => row.every((cell) => cell !== null && cell !== ''));
+  } else if (confirmed === 'replace') {
+    return data.map((row) => row.map((cell, index) => {
+      if (cell === null || cell === '') {
+        const columnData = data.map(r => r[index]).filter(v => v !== null && v !== '');
+        const median = calculateMedian(columnData);
+        return median;
+      }
+      return cell;
+    }));
+  }
+}
+
+// Popup for cleaning confirmation
+function confirmDataCleaning() {
+  return new Promise((resolve) => {
+    const popup = window.confirm('Do you want to remove missing values or replace them with the median? Click "OK" to remove, or "Cancel" to replace with median.');
+    resolve(popup ? 'remove' : 'replace');
+  });
 }
 
 // Descriptive statistics calculation (per column)
@@ -160,135 +185,85 @@ function calculateVariance(data, mean) {
   return data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;
 }
 
-// Linear regression calculation (between column 0 and column 1)
-function calculateLinearRegression(data) {
-  const x = data.map((row) => row[0]);
-  const y = data.map((row) => row[1]);
-
-  const n = x.length;
-  const sumX = x.reduce((sum, val) => sum + val, 0);
-  const sumY = y.reduce((sum, val) => sum + val, 0);
-  const sumXY = x.reduce((sum, val, i) => sum + val * y[i], 0);
-  const sumX2 = x.reduce((sum, val) => sum + val * val, 0);
-
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-
-  return { slope, intercept };
-}
-
-// Format and display regression results
-function formatRegressionStats({ slope, intercept }) {
-  return `
-    <h3>Linear Regression Results</h3>
-    <p>Slope (m): ${slope.toFixed(4)}</p>
-    <p>Intercept (b): ${intercept.toFixed(4)}</p>
-  `;
-}
-
-// Format and display descriptive stats
+// Format descriptive stats for display
 function formatDescriptiveStats(stats) {
-  return Object.keys(stats).map((col) => {
-    const s = stats[col];
-    return `
-      <h3>Descriptive Statistics for ${col}</h3>
-      <p>Mean: ${s.mean.toFixed(2)}</p>
-      <p>Median: ${s.median.toFixed(2)}</p>
-      <p>Mode: ${s.mode.join(', ')}</p>
-      <p>Range: ${s.range}</p>
-      <p>Variance: ${s.variance.toFixed(2)}</p>
-      <p>Standard Deviation: ${s.stdDev.toFixed(2)}</p>
-    `;
-  }).join('');
-}
-
-// Render all charts
-function renderCharts(data, regressionResult = null) {
-  data[0].forEach((_, colIndex) => {
-    renderColumnCharts(data, colIndex, regressionResult);
-  });
-}
-
-// Render charts for each column
-function renderColumnCharts(data, colIndex, regressionResult) {
-  const columnData = data.slice(1).map((row) => row[colIndex]);
-
-  // Render histogram for the column
-  renderHistogramChart(columnData, colIndex);
-
-  // Render pie chart for the column (if categorical data)
-  renderPieChart(columnData, colIndex);
-
-  // Render scatter chart for pairwise columns (if numeric)
-  if (colIndex < data[0].length - 1) {
-    const nextColumnData = data.slice(1).map((row) => row[colIndex + 1]);
-    renderScatterChart(columnData, nextColumnData, colIndex);
+  let outputHTML = '<h3>Descriptive Statistics:</h3>';
+  for (const column in stats) {
+    outputHTML += `<b>${column}:</b><br>`;
+    const stat = stats[column];
+    outputHTML += `Mean: ${stat.mean.toFixed(2)}<br>`;
+    outputHTML += `Median: ${stat.median.toFixed(2)}<br>`;
+    outputHTML += `Mode: ${stat.mode.join(', ')}<br>`;
+    outputHTML += `Range: ${stat.range.toFixed(2)}<br>`;
+    outputHTML += `Variance: ${stat.variance.toFixed(2)}<br>`;
+    outputHTML += `Standard Deviation: ${stat.stdDev.toFixed(2)}<br><br>`;
   }
+  return outputHTML;
 }
 
-// Render scatter plot
-function renderScatterChart(xData, yData, colIndex) {
-  const scatterData = xData.map((x, i) => ({ x, y: yData[i] }));
-  const scatterChartData = {
-    datasets: [
-      {
-        label: `Scatter Data - Column ${colIndex + 1}`,
-        data: scatterData,
-        backgroundColor: 'rgba(0, 123, 255, 0.7)',
-      },
-    ],
-  };
+// Linear regression calculation (simple linear regression: y = mx + b)
+function calculateLinearRegressionForColumns(data, xColumnIndex, yColumnIndex) {
+  const xValues = data.map((row) => row[xColumnIndex]);
+  const yValues = data.map((row) => row[yColumnIndex]);
 
-  new Chart(scatterChartCanvas, {
+  const n = xValues.length;
+  const xMean = xValues.reduce((acc, val) => acc + val, 0) / n;
+  const yMean = yValues.reduce((acc, val) => acc + val, 0) / n;
+
+  let numerator = 0;
+  let denominator = 0;
+  for (let i = 0; i < n; i++) {
+    numerator += (xValues[i] - xMean) * (yValues[i] - yMean);
+    denominator += Math.pow(xValues[i] - xMean, 2);
+  }
+
+  const m = numerator / denominator;
+  const b = yMean - m * xMean;
+
+  return { m, b };
+}
+
+// Format regression result
+function formatRegressionStats(result) {
+  return `<h3>Linear Regression:</h3>Equation: y = ${result.m.toFixed(2)}x + ${result.b.toFixed(2)}`;
+}
+
+// Render charts
+function renderCharts(data, stats = null) {
+  const scatterData = data.map(row => row[0]);
+  const scatterLabels = data.map((_, index) => index);
+
+  const scatterChart = new Chart(scatterChartCanvas, {
     type: 'scatter',
-    data: scatterChartData,
+    data: {
+      labels: scatterLabels,
+      datasets: [{
+        label: 'Scatter Plot',
+        data: scatterData.map((value, index) => ({ x: index, y: value })),
+        backgroundColor: 'rgba(75, 192, 192, 1)'
+      }]
+    }
   });
-}
 
-// Render histogram for column
-function renderHistogramChart(data, colIndex) {
-  const histogramData = {
-    labels: Array.from({ length: 10 }, (_, i) => (i * 10)),
-    datasets: [
-      {
-        label: `Histogram - Column ${colIndex + 1}`,
-        data: data.reduce((acc, value) => {
-          const bin = Math.floor(value / 10) * 10;
-          acc[bin] = (acc[bin] || 0) + 1;
-          return acc;
-        }, {}),
-        backgroundColor: 'rgba(255, 159, 64, 0.7)',
-      },
-    ],
-  };
-
-  new Chart(histogramChartCanvas, {
+  const histogramData = data.map(row => row[0]);
+  const histogramChart = new Chart(histogramChartCanvas, {
     type: 'bar',
-    data: histogramData,
+    data: {
+      labels: histogramData,
+      datasets: [{
+        label: 'Histogram',
+        data: histogramData,
+        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+        borderColor: 'rgba(153, 102, 255, 1)',
+        borderWidth: 1
+      }]
+    }
   });
-}
 
-// Render pie chart for categorical data
-function renderPieChart(data, colIndex) {
-  const categoryCounts = data.reduce((acc, category) => {
-    acc[category] = (acc[category] || 0) + 1;
-    return acc;
-  }, {});
-
-  const pieData = {
-    labels: Object.keys(categoryCounts),
-    datasets: [
-      {
-        data: Object.values(categoryCounts),
-        backgroundColor: ['red', 'blue', 'green', 'yellow', 'purple', 'orange'],
-      },
-    ],
-  };
-
-  new Chart(pieChartCanvas, {
-    type: 'pie',
-    data: pieData,
-  });
+  // If stats are available, show box plot or more charts as needed
+  if (stats) {
+    // Optionally, add a box plot or another relevant chart
+  }
 }
 
 // Export data to CSV
@@ -299,4 +274,22 @@ function exportToCSV() {
   link.href = URL.createObjectURL(blob);
   link.download = 'data.csv';
   link.click();
+}
+
+// Get columns for correlation
+function getColumnsForCorrelation() {
+  return new Promise((resolve) => {
+    const col1 = parseInt(prompt('Enter the index (1-based) of the first column you want to correlate:')) - 1;
+    const col2 = parseInt(prompt('Enter the index (1-based) of the second column you want to correlate:')) - 1;
+    resolve({ x: col1, y: col2 });
+  });
+}
+
+// Get columns for regression
+function getColumnsForRegression() {
+  return new Promise((resolve) => {
+    const xCol = parseInt(prompt('Enter the index (1-based) of the independent variable (x):')) - 1;
+    const yCol = parseInt(prompt('Enter the index (1-based) of the dependent variable (y):')) - 1;
+    resolve({ x: xCol, y: yCol });
+  });
 }
