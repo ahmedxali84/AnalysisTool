@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,41 +9,64 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="loader" id="loader">
-        <h1>ANALYSIS TOOL</h1>
-        <p>ANALYZE WITH US</p>
-    </div>
+  <div class="loader" id="loader">
+    <h1>ANALYSIS TOOL</h1>
+  </div>
 
   <h1>Comprehensive Data Analysis Tool</h1>
   <div class="container" id="container" style="display:none;">
+    <!-- Data Management Section -->
     <div class="section">
       <h2>Data Management</h2>
       <input type="file" id="fileInput" accept=".csv">
       <button id="exportData">Export Data</button>
     </div>
 
+    <!-- Operations Section -->
     <div class="section">
       <h2>Operations</h2>
       <label for="rowLimitInput">Number of rows to display:</label>
       <input type="number" id="rowLimitInput" min="1" placeholder="Enter number of rows">
+      
+      <label for="operationSelect">Select Operation:</label>
       <select id="operationSelect">
         <option value="">Select Operation</option>
         <option value="cleaning">Data Cleaning</option>
         <option value="descriptive">Descriptive Statistics</option>
+        <option value="regression">Linear Regression</option>
       </select>
       <button id="processBtn">Process</button>
     </div>
-
+    <div id="output"></div>
+    <table id="dataTable"></table>
+    <button id="exportData">Export Data</button>
+  
+    <!-- Chart Containers -->
+    <div class="chart-container">
+      <h3>Scatter Plot</h3>
+      <canvas id="scatterChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>Histogram</h3>
+      <canvas id="histogramChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>Pie Chart</h3>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+    <!-- Data Table -->
     <table id="dataTable"></table>
 
+    <!-- Output Section -->
     <div class="output" id="output"></div>
 
     <!-- Chart Containers -->
     <div class="chart-container">
-      <canvas id="scatterChart"></canvas>
+      <canvas id="scatterChartCanvas"></canvas>
     </div>
-    <!-- other chart containers -->
   </div>
+
   <script src="main.js"></script>
 </body>
 </html>
