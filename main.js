@@ -34,7 +34,7 @@ function handleFile(event) {
     const reader = new FileReader();
     reader.onload = function (e) {
       parsedData = parseCSV(e.target.result);
-      displayTable(parsedData);  // Initial display of the entire table
+      displayTable(parsedData); // Initial display of the entire table
     };
     reader.readAsText(file);
   } else {
@@ -56,26 +56,26 @@ function displayTable(data) {
   const limitedData = data.slice(0, rowLimit);
 
   const headerRow = document.createElement('tr');
-  limitedData[0].forEach((_, index) => {
+  limitedData[0].forEach((header) => {
     const th = document.createElement('th');
-    th.textContent = `Column ${index + 1}`;
+    th.textContent = header;
     headerRow.appendChild(th);
   });
   dataTable.appendChild(headerRow);
 
-  limitedData.forEach((row, rowIndex) => {
+  limitedData.slice(1).forEach((row) => {
     const tr = document.createElement('tr');
     row.forEach((cell) => {
-      const cellElement = document.createElement(rowIndex === 0 ? 'th' : 'td');
-      cellElement.textContent = cell;
-      tr.appendChild(cellElement);
+      const td = document.createElement('td');
+      td.textContent = cell;
+      tr.appendChild(td);
     });
     dataTable.appendChild(tr);
   });
 }
 
 // Process operation based on user selection
-async function processOperation() {
+function processOperation() {
   const operation = operationSelect.value;
   if (!operation) {
     alert('Please select an operation.');
@@ -84,212 +84,257 @@ async function processOperation() {
 
   const rowLimit = parseInt(rowLimitInput.value, 10) || parsedData.length;
   const limitedData = parsedData.slice(0, rowLimit);
+  const headers = limitedData[0]; // First row as headers
 
   if (operation === 'cleaning') {
-    const cleanedData = await cleanData(limitedData);
+    const cleanedData = cleanData(limitedData);
     displayTable(cleanedData);
     output.textContent = 'Data cleaned successfully!';
     renderCharts(cleanedData);
   } else if (operation === 'descriptive') {
     const stats = getDescriptiveStats(limitedData);
     output.innerHTML = formatDescriptiveStats(stats);
-    renderCharts(limitedData, stats);
-  } else if (operation === 'regression') {
-    const columns = await getColumnsForRegression();
-    const regressionResult = calculateLinearRegressionForColumns(limitedData, columns.x, columns.y);
-    output.innerHTML = formatRegressionStats(regressionResult);
-    renderCharts(limitedData, regressionResult);
-  } else if (operation === 'correlation') {
-    const columns = await getColumnsForCorrelation();
-    const correlation = calculateCorrelationForColumns(limitedData, columns.x, columns.y);
-    output.innerHTML = `Correlation: ${correlation.toFixed(2)}`;
     renderCharts(limitedData);
-  }
-}
+  } else if (operation === 'regression') {
+    const xColumnName = prompt(`Enter the column name for the independent variable (X): \nAvailable columns: ${headers.join(', ')}`);
+    const yColumnName = prompt(`Enter the column name for the dependent variable (Y): \nAvailable columns: ${headers.join(', ')}`);
 
-// Data cleaning function (example: removing rows with missing values)
-async function cleanData(data) {
-  const confirmed = await confirmDataCleaning();
-  if (confirmed === 'remove') {
-    return data.filter((row) => row.every((cell) => cell !== null && cell !== ''));
-  } else if (confirmed === 'replace') {
-    return data.map((row) => row.map((cell, index) => {
-      if (cell === null || cell === '') {
-        const columnData = data.map(r => r[index]).filter(v => v !== null && v !== '');
-        const median = calculateMedian(columnData);
-        return median;
-      }
-      return cell;
-    }));
-  }
-}
-
-// Popup for cleaning confirmation
-function confirmDataCleaning() {
-  return new Promise((resolve) => {
-    const popup = window.confirm('Do you want to remove missing values or replace them with the median? Click "OK" to remove, or "Cancel" to replace with median.');
-    resolve(popup ? 'remove' : 'replace');
-  });
-}
-
-// Descriptive statistics calculation (per column)
-function getDescriptiveStats(data) {
-  const columns = data[0];
-  const stats = {};
-
-  columns.forEach((col, index) => {
-    const columnData = data.slice(1).map((row) => row[index]);
-    const numericData = columnData.filter((cell) => typeof cell === 'number');
-
-    if (numericData.length > 0) {
-      const mean = numericData.reduce((acc, val) => acc + val, 0) / numericData.length;
-      const median = calculateMedian(numericData);
-      const mode = calculateMode(numericData);
-      const range = Math.max(...numericData) - Math.min(...numericData);
-      const variance = calculateVariance(numericData, mean);
-      const stdDev = Math.sqrt(variance);
-
-      stats[col] = { mean, median, mode, range, variance, stdDev };
+    try {
+      const regressionResult = calculateLinearRegressionForColumnsByName(limitedData, headers, xColumnName, yColumnName);
+      output.innerHTML = regressionResult;
+      renderCharts(regressionResult.validData, regressionResult);
+    } catch (error) {
+      alert(error.message);
     }
-  });
+  } else if (operation === 'correlation') {
+    const xColumnName = prompt(`Enter the column name for the first variable: \nAvailable columns: ${headers.join(', ')}`);
+    const yColumnName = prompt(`Enter the column name for the second variable: \nAvailable columns: ${headers.join(', ')}`);
 
+    try {
+      // Ensure that xColumnName and yColumnName are valid column names
+      console.log('xColumnName:', xColumnName);
+      console.log('yColumnName:', yColumnName);
+  
+      // Check that the headers array contains the column names
+      console.log('Headers:', headers);
+      
+      // Call the function to calculate correlation
+      const correlation = calculateCorrelationForColumns(limitedData, headers, xColumnName, yColumnName);
+      
+      // Display the correlation result
+      output.innerHTML = `Correlation: ${correlation.toFixed(2)}`;
+      
+      // Render charts with the data
+      renderCharts(limitedData);
+  
+  } catch (error) {
+      // Log the error message to the console for more detailed debugging
+      console.error('Error occurred:', error);
+      
+      // Show an alert with the error message
+      alert(error.message);
+  }
+  
+  } else if (operation === 'normalize') {
+    const normalizedData = normalizeData(limitedData);
+    displayTable(normalizedData);
+    output.textContent = 'Data normalized successfully!';
+    renderCharts(normalizedData);
+  } else if (operation === 'transform') {
+    const columnToTransform = prompt(`Enter the column name to apply transformation (log/sqrt): \nAvailable columns: ${headers.join(', ')}`);
+    const transformedData = transformData(limitedData, columnToTransform);
+    displayTable(transformedData);
+    output.textContent = `Data transformed successfully (log/sqrt applied to ${columnToTransform})!`;
+    renderCharts(transformedData);
+  } else if (operation === 'outlier') {
+    const outlierData = detectOutliers(limitedData);
+    displayTable(outlierData);
+    output.textContent = 'Outlier detection complete!';
+    renderCharts(outlierData);
+  } else if (operation === 'clustering') {
+    const k = parseInt(prompt('Enter the number of clusters (K):'), 10);
+    const clusteredData = applyKMeansClustering(limitedData, k);
+    displayTable(clusteredData);
+    output.textContent = `Clustering completed with ${k} clusters!`;
+    renderCharts(clusteredData);
+  }
+}
+
+// Data Cleaning
+function cleanData(data) {
+  return data.filter(row => row.every(cell => cell !== ''));
+}
+
+// Descriptive Stats
+function getDescriptiveStats(data) {
+  const numericData = data.slice(1).map(row => row.filter(cell => typeof cell === 'number' && !isNaN(cell)));
+  const stats = numericData.map(col => {
+    const mean = col.reduce((a, b) => a + b, 0) / col.length;
+    const variance = col.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / col.length;
+    const stdDev = Math.sqrt(variance);
+    return { mean, variance, stdDev };
+  });
   return stats;
 }
 
-// Helper functions for statistics
-function calculateMedian(data) {
-  data.sort((a, b) => a - b);
-  const middle = Math.floor(data.length / 2);
-  return data.length % 2 !== 0 ? data[middle] : (data[middle - 1] + data[middle]) / 2;
-}
-
-function calculateMode(data) {
-  const frequency = {};
-  let maxFreq = 0;
-  let modes = [];
-  data.forEach((num) => {
-    frequency[num] = (frequency[num] || 0) + 1;
-    if (frequency[num] > maxFreq) {
-      maxFreq = frequency[num];
-    }
-  });
-  for (let num in frequency) {
-    if (frequency[num] === maxFreq) {
-      modes.push(Number(num));
-    }
-  }
-  return modes;
-}
-
-function calculateVariance(data, mean) {
-  return data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;
-}
-
-// Format descriptive stats for display
+// Format Descriptive Stats
 function formatDescriptiveStats(stats) {
-  let outputHTML = '<h3>Descriptive Statistics:</h3>';
-  for (const column in stats) {
-    outputHTML += `<b>${column}:</b><br>`;
-    const stat = stats[column];
-    outputHTML += `Mean: ${stat.mean.toFixed(2)}<br>`;
-    outputHTML += `Median: ${stat.median.toFixed(2)}<br>`;
-    outputHTML += `Mode: ${stat.mode.join(', ')}<br>`;
-    outputHTML += `Range: ${stat.range.toFixed(2)}<br>`;
-    outputHTML += `Variance: ${stat.variance.toFixed(2)}<br>`;
-    outputHTML += `Standard Deviation: ${stat.stdDev.toFixed(2)}<br><br>`;
-  }
-  return outputHTML;
+  return stats.map(stat => `
+    <p>Mean: ${stat.mean.toFixed(2)}, Variance: ${stat.variance.toFixed(2)}, Std Dev: ${stat.stdDev.toFixed(2)}</p>
+  `).join('');
 }
 
-// Linear regression calculation (simple linear regression: y = mx + b)
-function calculateLinearRegressionForColumns(data, xColumnIndex, yColumnIndex) {
-  const xValues = data.map((row) => row[xColumnIndex]);
-  const yValues = data.map((row) => row[yColumnIndex]);
-
-  const n = xValues.length;
-  const xMean = xValues.reduce((acc, val) => acc + val, 0) / n;
-  const yMean = yValues.reduce((acc, val) => acc + val, 0) / n;
-
-  let numerator = 0;
-  let denominator = 0;
-  for (let i = 0; i < n; i++) {
-    numerator += (xValues[i] - xMean) * (yValues[i] - yMean);
-    denominator += Math.pow(xValues[i] - xMean, 2);
-  }
-
-  const m = numerator / denominator;
-  const b = yMean - m * xMean;
-
-  return { m, b };
+// Normalize Data (Min-Max)
+function normalizeData(data) {
+  const numericColumns = data[0].map((_, colIndex) => data.slice(1).map(row => row[colIndex]).filter(cell => typeof cell === 'number'));
+  const minMax = numericColumns.map(col => {
+    const min = Math.min(...col);
+    const max = Math.max(...col);
+    return { min, max };
+  });
+  return data.map((row, rowIndex) => row.map((cell, colIndex) => {
+    if (typeof cell === 'number') {
+      const { min, max } = minMax[colIndex];
+      return (cell - min) / (max - min);
+    }
+    return cell;
+  }));
 }
 
-// Format regression result
-function formatRegressionStats(result) {
-  return `<h3>Linear Regression:</h3>Equation: y = ${result.m.toFixed(2)}x + ${result.b.toFixed(2)}`;
+// Transform Data (Log)
+function transformData(data, columnName) {
+  const columnIndex = data[0].indexOf(columnName);
+  return data.map(row => {
+    const transformedValue = Math.log(row[columnIndex]);
+    row[columnIndex] = transformedValue;
+    return row;
+  });
+}
+
+// Outlier Detection
+function detectOutliers(data) {
+  const colIndex = data[0].length - 1; // Last column for simplicity
+  const values = data.slice(1).map(row => row[colIndex]);
+  const q1 = quantile(values, 0.25);
+  const q3 = quantile(values, 0.75);
+  const iqr = q3 - q1;
+  const lowerFence = q1 - 1.5 * iqr;
+  const upperFence = q3 + 1.5 * iqr;
+  return data.filter(row => row[colIndex] >= lowerFence && row[colIndex] <= upperFence);
+}
+
+// Calculate Quantile
+function quantile(arr, q) {
+  arr.sort((a, b) => a - b);
+  const pos = (arr.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  return arr[base] + rest * (arr[base + 1] - arr[base]);
+}
+
+// K-Means Clustering
+function applyKMeansClustering(data, k) {
+  const centroids = initializeCentroids(data, k);
+  let prevCentroids;
+  let clusters;
+  let iterations = 0;
+  do {
+    prevCentroids = centroids;
+    clusters = assignPointsToClusters(data, centroids);
+    centroids = updateCentroids(clusters);
+    iterations++;
+  } while (!centroidsEqual(prevCentroids, centroids) && iterations < 10);
+  return clusters;
+}
+
+// Initialize Centroids
+function initializeCentroids(data, k) {
+  return Array.from({ length: k }, () => data[Math.floor(Math.random() * data.length)]);
+}
+
+// Assign points to clusters
+function assignPointsToClusters(data, centroids) {
+  return data.map((point) => {
+    const distances = centroids.map((centroid) => distance(point, centroid));
+    const closestCentroidIndex = distances.indexOf(Math.min(...distances));
+    return { point, cluster: closestCentroidIndex };
+  });
+}
+
+// Euclidean distance
+function distance(a, b) {
+  return Math.sqrt(a.reduce((sum, value, index) => sum + Math.pow(value - b[index], 2), 0));
+}
+
+// Update Centroids
+function updateCentroids(clusters) {
+  const k = Math.max(...clusters.map((cluster) => cluster.cluster)) + 1;
+  const newCentroids = [];
+  for (let i = 0; i < k; i++) {
+    const clusterPoints = clusters.filter(cluster => cluster.cluster === i).map(cluster => cluster.point);
+    const newCentroid = clusterPoints[0].map((_, colIndex) => clusterPoints.reduce((sum, point) => sum + point[colIndex], 0) / clusterPoints.length);
+    newCentroids.push(newCentroid);
+  }
+  return newCentroids;
+}
+
+// Check if centroids are equal
+function centroidsEqual(centroids1, centroids2) {
+  return centroids1.every((centroid, index) => centroid.every((value, valueIndex) => value === centroids2[index][valueIndex]));
 }
 
 // Render charts
-function renderCharts(data, stats = null) {
-  const scatterData = data.map(row => row[0]);
-  const scatterLabels = data.map((_, index) => index);
-
-  const scatterChart = new Chart(scatterChartCanvas, {
+function renderCharts(data) {
+  new Chart(scatterChartCanvas, {
     type: 'scatter',
     data: {
-      labels: scatterLabels,
       datasets: [{
         label: 'Scatter Plot',
-        data: scatterData.map((value, index) => ({ x: index, y: value })),
-        backgroundColor: 'rgba(75, 192, 192, 1)'
-      }]
-    }
+        data: data.slice(1).map(row => ({ x: row[0], y: row[1] })),
+      }],
+    },
   });
 
-  const histogramData = data.map(row => row[0]);
-  const histogramChart = new Chart(histogramChartCanvas, {
+  new Chart(histogramChartCanvas, {
     type: 'bar',
     data: {
-      labels: histogramData,
+      labels: data.slice(1).map(row => row[0]),
       datasets: [{
         label: 'Histogram',
-        data: histogramData,
-        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 1
-      }]
-    }
+        data: data.slice(1).map(row => row[1]),
+      }],
+    },
   });
 
-  // If stats are available, show box plot or more charts as needed
-  if (stats) {
-    // Optionally, add a box plot or another relevant chart
-  }
+  new Chart(pieChartCanvas, {
+    type: 'pie',
+    data: {
+      labels: ['Label 1', 'Label 2', 'Label 3'],
+      datasets: [{
+        data: [10, 20, 30],
+      }],
+    },
+  });
+
+  new Chart(lineChartCanvas, {
+    type: 'line',
+    data: {
+      labels: data.slice(1).map(row => row[0]),
+      datasets: [{
+        label: 'Line Chart',
+        data: data.slice(1).map(row => row[1]),
+      }],
+    },
+  });
 }
 
-// Export data to CSV
+// Export Data to CSV
 function exportToCSV() {
-  const csvContent = parsedData.map((row) => row.join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'data.csv';
-  link.click();
-}
-
-// Get columns for correlation
-function getColumnsForCorrelation() {
-  return new Promise((resolve) => {
-    const col1 = parseInt(prompt('Enter the index (1-based) of the first column you want to correlate:')) - 1;
-    const col2 = parseInt(prompt('Enter the index (1-based) of the second column you want to correlate:')) - 1;
-    resolve({ x: col1, y: col2 });
-  });
-}
-
-// Get columns for regression
-function getColumnsForRegression() {
-  return new Promise((resolve) => {
-    const xCol = parseInt(prompt('Enter the index (1-based) of the independent variable (x):')) - 1;
-    const yCol = parseInt(prompt('Enter the index (1-based) of the dependent variable (y):')) - 1;
-    resolve({ x: xCol, y: yCol });
-  });
+  const csv = parsedData.map(row => row.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'processed_data.csv';
+  a.click();
 }
